@@ -32,6 +32,8 @@ func main() {
 }
 ```
 
+<!-- more -->
+
 ```
 fatal error: concurrent map writes
 fatal error: concurrent map writes

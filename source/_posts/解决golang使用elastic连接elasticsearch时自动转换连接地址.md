@@ -15,6 +15,8 @@ time="2019-02-15T20:04:26+08:00" level=error msg="Head http://172.17.0.2:9200: c
 
 ## 解决方法
 
+<!-- more -->
+
 ```golang
 client, _ := elastic.NewClient(
   // ...

@@ -16,11 +16,14 @@ tags:
 
 下面开始使用git filter-branch清除文件提交记录
 
+<!-- more -->
+
 1、进入项目根路径
 
 ```bash
 cd YOUR-REPOSITORY
 ```
+
 2、执行`git filter-branch`
 
 `注意执行该命令后相应的文件也会被删除，如果不希望文件被删除可以先做好备份，后续再恢复`

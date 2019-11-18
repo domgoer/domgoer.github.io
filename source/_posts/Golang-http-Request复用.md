@@ -25,6 +25,8 @@ func main(){
 }
 ```
 
+<!-- more -->
+
 第二次请求会出错
 
 `http: ContentLength=5 with Body length 0`

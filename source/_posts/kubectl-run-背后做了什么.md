@@ -20,6 +20,8 @@ tags:
     * basic username password: 基本的账号密码认证
     * openid: 类似于 token，openid 由用户事先手动设置
 
+<!-- more -->
+
 4. 这时 api-server 已经成功接收到了请求。它会判断我们是不是有权限操作这个资源。那么怎么验证呢，在 api-server 启动的时候，可以通过参数 --authorization_mode 进行设置，这个值有 4 种。
 
     * webhook: 与集群外的 HTTPS 服务交互
