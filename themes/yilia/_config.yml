@@ -54,7 +54,7 @@ gitment_oauth:
 
 menu:
   主页: /
-  随笔: /tags/随笔/
+  头秃问题: /tags/issues/
 
 feed:
     type: atom

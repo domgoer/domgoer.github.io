@@ -51,3 +51,26 @@ tags:
 ### Privileged Context
 
 在执行 CI 时，重要一步就是构建镜像。以 docker 为例。使用 docker 构建镜像就需要用到 `Docker Deamon`，Docker Deamon 可以使用宿主机上的或者可以在 Container 内启动一个 Docker Deamon，这里就形成了两种不同的模式，也就是 `Docker Outside Docker` 和 `Docker In Docker`。
+
+因为 Docker Outside Docker 需要挂载宿主机的文件，所以自然在这种情况下是无法使用的。而 Docker In Docker 因为需要在容器内启动 Docker Deamon，所以需要 Privileged 权限，遗憾的是目前 ECI 中并不支持 Container 使用 Privileged Context。所有这两种方法在当前情况下都无法有效地构建镜像。
+
+那么如何解决这种问题？
+
+1. 通过一个服务将某台主机的 docker.sock 通过 TCP 的方式暴露出来，再通过 TCP 的方式访问 Docker Deamon。
+2. 使用 [Kaniko](https://github.com/GoogleContainerTools/kaniko) 来构建镜像。
+
+这里，我们选用了 kaniko 作为构建工具。
+
+### Knaiko
+
+![Knaiko](https://raw.githubusercontent.com/GoogleContainerTools/kaniko/master/logo/Kaniko-Logo.png)
+
+> Knaiko 是从容器或 Kubernetes 集群内部的 Dockerfile 构建容器映像的工具。不依赖 Docker 守护程序，而是完全在用户空间中执行 Dockerfile 中的每个命令。这样就可以在无法轻松或安全地运行 Docker 守护程序的环境（例如标准Kubernetes集群）中构建容器映像。
+
+Kaniko 执行器首先根据 Dockerfile 中的 `FROM` 一行命令解析基础镜像，按照 Dockerfile 中的顺序来执行每一行命令，在每执行完一条命令之后，会在用户目录空间中产生一个文件系统的快照，并与存储于内存中的上一个状态进行对比，若有改变，则将其认为是对基础镜像进行的修改，并以新层级的形式对文件系统进行增加扩充，并将修改写入镜像的元数据中。在执行完 Dockerfile 中的每一条指令之后， Kaniko 执行器将最终的镜像文件推送到指定的镜像仓库。
+
+Kaniko 可以在不具有 `ROOT` 权限的环境下，完全在用户空间中执行解压文件系统，执行构建命令以及生成文件系统的快照等一系列操作，以上构建的过程完全没有引入 docker 守护进程以及CLI的操作。
+
+到这，构建镜像问题也解决了。接下来就可以将整个构建调度到 ECI 了。
+
+后续：[如何将Drone CI调度到Virtual Kubelet（二）](https://blog.domgoer.io/unknown)

@@ -14,7 +14,7 @@ timezone:
 # URL
 ## If your site is put in a subdirectory, set url as 'http://yoursite.com/child' and root as '/child/'
 url: https://blog.domgoer.io
-permalink: :year/:month/:day/:id/
+permalink: :id/
 permalink_defaults:
 
 # Directory
@@ -142,7 +142,7 @@ favicon: /favicon.png
 #具体请参考wiki：https://github.com/litten/hexo-theme-yilia/wiki/
 
 #1、多说
-duoshuo: false
+duoshuo: true
 
 #2、网易云跟帖
 wangyiyun: false
@@ -151,19 +151,13 @@ wangyiyun: false
 changyan_appid: false
 changyan_conf: false
 
-
-#5、Gitment
+# 5 gitment
 gitment_owner: domgoer      #你的 GitHub ID
 gitment_repo: comment          #存储评论的 repo
 gitment_oauth:
   client_id: '3555e6a9977f80d27df2'           #client ID
   client_secret: '4fcc0939c4a98aa712500397f83cec5fc9650859'       #client secret
 
-
-
-menu:
-  主页: /
-  随笔: /tags/随笔/
 
 feed:
     type: atom
