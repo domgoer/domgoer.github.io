@@ -1,5 +1,5 @@
 ---
-title: 如何将Drone CI调度到Virtual Kubelet（一）
+title: 如何将Drone CI调度到Virtual Kubelet
 date: 2019-11-18 23:53:30
 tags:
 - devops
@@ -73,4 +73,111 @@ Kaniko 可以在不具有 `ROOT` 权限的环境下，完全在用户空间中�
 
 到这，构建镜像问题也解决了。接下来就可以将整个构建调度到 ECI 了。
 
-后续：[如何将Drone CI调度到Virtual Kubelet（二）](https://blog.domgoer.io/unknown)
+## 实际过程中遇到的问题
+
+虽说上面已经为 Drone 兼容 ECI 的目标做了很多事情，但也只是理论上的。实际在操作中仍然遇到了很多问题。
+
+因为 Drone 在执行一次构建时需要不断的 Update Pod，而目前看来似乎 ECI 的 Update 机制做的不是很完善，在 Update 过程中出现了很多问题。
+
+1. 在 Update 时，所有 Pod 的 `Environment` 都丢失。
+
+    ```bash
+    > k exec -it -n beta nginx env
+    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    NGINX_VERSION=1.17.5
+    NJS_VERSION=0.3.6
+    PKG_RELEASE=1~buster
+    KUBERNETES_PORT_443_TCP_PROTO=tcp
+    KUBERNETES_PORT_443_TCP_ADDR=172.21.0.1
+    KUBERNETES_PORT_443_TCP_PORT=443
+    KUBERNETES_PORT_443_TCP=tcp://172.21.0.1:443
+    KUBERNETES_SERVICE_HOST=172.21.0.1
+    TESTHELLO=test
+    KUBERNETES_SERVICE_PORT_HTTPS=443
+    KUBERNETES_SERVICE_PORT=443
+    KUBERNETES_PORT=tcp://172.21.0.1:443
+    TERM=xterm
+    HOME=/root
+
+    > k edit pod -n beta nginx
+    pod/nginx edited
+
+    > k exec -it -n beta nginx env
+    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    TERM=xterm
+    HOME=/root
+    ```
+
+2. Pod 中每个 Container 的 Environment 数量不能超过 92 个。因为 Drone 将每个 Step 执行的关键信息都保存在 Env 中，导致每个 Container 需要包含大量 Env，因此在调度 Pod 到 ECI 上时出现了 `ExceedParamError`。
+
+3. Pod Update 时 EmptyDir 中的文件会丢失。Drone 通过 EmptyDir 来共享每步获得或者修改的文件，EmptyDir 丢失导致 CI 失败。
+
+4. Pod Update 某个 `Image` 时，K8S 内显示 Pod 更新成功，但 ECI 的接口返回了失败。
+
+    ```bash
+    Normal   SuccessfulMountVolume  2m5s                 kubelet, eci                    MountVolume.SetUp succeeded for volume "drone-dggd12eq2mlm5zeevff9"
+    Normal   SuccessfulMountVolume  2m5s                 kubelet, eci                    MountVolume.SetUp succeeded for volume "drone-sw7d8bri9rpn0tjr90bp"
+    Normal   SuccessfulMountVolume  2m5s                 kubelet, eci                    MountVolume.SetUp succeeded for volume "default-token-l6jsc"
+    Normal   Started                2m4s (x4 over 2m4s)  kubelet, eci                    Started container
+    Normal   Pulled                 2m4s                 kubelet, eci                    Container image "registry-vpc.cn-hangzhou.aliyuncs.com/drone-git:latest" already present on machine
+    Normal   Created                2m4s (x4 over 2m4s)  kubelet, eci                    Created container
+    Normal   Pulled                 2m4s (x3 over 2m4s)  kubelet, eci                    Container image "drone/placeholder:1" already present on machine
+    Warning  ProviderInvokeFailed   104s                 virtual-kubelet/pod-controller  SDK.ServerError
+    ErrorCode: UnknownError
+    Recommend:
+    RequestId: 94D6A5E0-9F90-47EF-99E9-64DFAE37XXXX
+    ```
+
+5. ECI 中 Pod Update 的策略和 K8S 中的不一致，K8S 中 Update Pod 时，只会 Kill 掉更改过的 Container，并进行替换。而在 ECI 上，会 Kill 掉所有正在运行的 Container，在进行替换。
+
+    ```bash
+    Type    Reason                 Age                 From          Message
+    ----    ------                 ----                ----          -------
+    Normal  Pulling                111s                kubelet, eci  pulling image "nginx"
+    Normal  Pulled                 102s                kubelet, eci  Successfully pulled image "nginx"
+    Normal  Pulling                101s                kubelet, eci  pulling image "redis"
+    Normal  Pulled                 97s                 kubelet, eci  Successfully pulled image "redis"
+    Normal  SuccessfulMountVolume  69s (x2 over 112s)  kubelet, eci  MountVolume.SetUp succeeded for volume "test-volume"
+    Normal  Killing                69s                 kubelet, eci  Killing container with id containerd://image-2:Need to kill Pod
+    Normal  Killing                69s                 kubelet, eci  Killing container with id containerd://image-3:Need to kill Pod
+    Normal  Pulled                 69s (x2 over 111s)  kubelet, eci  Container image "busybox" already present on machine
+    Normal  SuccessfulMountVolume  69s (x2 over 112s)  kubelet, eci  MountVolume.SetUp succeeded for volume "default-token-l6jsc"
+    Normal  Pulling                68s                 kubelet, eci  pulling image "mongo"
+    Normal  Started                46s (x5 over 111s)  kubelet, eci  Started container
+    Normal  Created                46s (x5 over 111s)  kubelet, eci  Created container
+    Normal  Pulled                 46s                 kubelet, eci  Successfully pulled image "mongo"
+    ```
+
+    感觉它的更新方式就是把 Pod 删了重新创建，这里只更新了 image-2 ，但是它把 image-3 也 Kill 掉了，还重新 Pull 了 image-1 的镜像。
+
+索性在将这些问题反馈给阿里云之后，阿里云花了大半个月的时间也修复了部分重大的错误，其他意料之外的小错误，也被我们通过其他小补丁暂时避开了。（ps: 后来在 Github 上看了 [alibabacloud-eci](https://github.com/virtual-kubelet/alibabacloud-eci) 后才知道，eci 当时不支持 Pod 的 live update 的，而且在其产品文档也无对该事的描述，不得不说这事太损了。反观其竞争对手 AWS，Azure 都已支持了 Pod live update，看来阿里云还有很长的路要走 🌜）
+
+## 持续优化
+
+解决了上面提到的问题，Drone 也算能勉强在 ECI 上运行了。但仍然有许多优化的空间。
+
+### 镜像拉取
+
+不同与在宿主机上创建 Pod，每次创建时可以使用宿主机上的镜像缓存。每次在 ECI 上创建 Pod 都需要拉取镜像，这便加慢了构建的速度，为了解决这一现象，阿里云也提供了方案 [imagecache](https://help.aliyun.com/document_detail/141241.html?spm=a2c4g.11174283.6.614.36ed4b5bSDZ6jm)。
+
+> imagecache 运行用户事先将需要用到的镜像作为云盘快照缓存，在创建ECI容器组实例时基于快照创建，避免或减少镜像层下载，从而提升ECI容器组实例创建速度。
+
+### 资源优化
+
+ECI 给 Drone 提供了一个巨大的便利，就是在限制运行资源时不需要为每个 Container 设置 resources。
+
+比如有两个 Step（Container），每个都需要 1vCPU 和 1Gi Mem，那么调度这个 Pod 就需要 node 上有超过 2vCPU 和 2Gi Mem 的资源，但又因为大多数时候 CI 构建任务是串行的，这两个 Step 不需要同时执行，也就是说在这种场景下其实只需要 1vCPU 和 1Gi Mem 就足够了，上面这种情况就造成了资源的浪费，但在宿主机上并没有办法很好的解决这个问题。不过在 ECI 中每个 Pod 会独占一台 ECI 实例，所以所有 Pod 内的所有 Container 都可以享受 ECI 的全额配置。
+
+这种资源分配方式和资源大小可以通过 Pod `Annotations` 来指定：
+
+```yaml
+annotations:
+    k8s.aliyun.com/eci-cpu: 1
+    k8s.aliyun.com/eci-memory: 1Gi
+```
+
+这样 Pod 就能在一个 1vCPU 和 1Gi Mem 的 ECI 实例中稳定运行完两个 Step。
+
+## 总结
+
+总的来说，`Virtual Kubelet` 可能是目前最好的弹性 CI 解决方案之一。(ps: 在 ECI 的产品文档中也包含了 Jenkins 和 Gitlab CI 的[最佳实践](https://help.aliyun.com/document_detail/98298.html?spm=a2c4g.11174283.6.601.4c6a4b5bNIYtpx))
