@@ -9,12 +9,11 @@ description:
 keywords:
 author: Dom Chan
 language:
-timezone:
 
 # URL
 ## If your site is put in a subdirectory, set url as 'http://yoursite.com/child' and root as '/child/'
 url: https://blog.domgoer.io
-permalink: :id/
+permalink: :year/:month/:day/:subtitle/
 permalink_defaults:
 
 # Directory

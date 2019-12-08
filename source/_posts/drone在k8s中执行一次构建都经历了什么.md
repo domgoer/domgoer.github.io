@@ -1,5 +1,6 @@
 ---
 title: Drone 在 K8S 中执行一次构建都经历了什么
+subtitle: drone-in-k8s
 date: 2019-10-22 14:37:10
 tags:
 - drone

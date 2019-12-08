@@ -1,5 +1,6 @@
 ---
 title: '头秃问题(一) ExitCode: 128 之无任何错误信息'
+subtitle: exit-code-128
 date: 2019-11-21 02:04:24
 tags:
 - issues
@@ -28,6 +29,8 @@ tags:
 于是我开始怀疑是不是 `git checkout -b master` 时出现了错误，于是我在 Docker 容器中模拟了该 Step 的步骤，`git checkout -b master | echo $?`，发现即使是显示 `Already on master` 它的退出码也是 0。于是排除了是 git 出错的可能性。
 
 那么问题出在哪呢？
+
+<!-- more -->
 
 经过一段时间排查，我发现只有当 `Image` 为 `registry.cn-hangzhou.aliyuncs.com/xxx/xxxx:xxx` 是才会出现这种不正常情况。
 

@@ -1,5 +1,6 @@
 ---
 title: 如何将Drone CI调度到Virtual Kubelet
+subtitle: drone-virtual-kublet
 date: 2019-11-18 23:53:30
 tags:
 - devops
