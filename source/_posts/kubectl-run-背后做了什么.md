@@ -48,9 +48,9 @@ tags:
 
 ### Contorller
 
-2. 数据已经保存到 etcd 中了，并且初始化逻辑也完成了，下面就需要 k8s 中的 `Controller` 来完成资源的创建了。各个 Controller 会监听各自负责的资源，比如 `Deployment Controller` 就会监听 `Deployment` 资源的变化。当 api-server 将资源保存到 etcd 后，Controller 发现了资源的变化，然后就根据变化类型会调用相应回调函数。每个 Controller 都会尽力将资源当前的状态逐步转化为 etcd 中保存的状态。
+1. 数据已经保存到 etcd 中了，并且初始化逻辑也完成了，下面就需要 k8s 中的 `Controller` 来完成资源的创建了。各个 Controller 会监听各自负责的资源，比如 `Deployment Controller` 就会监听 `Deployment` 资源的变化。当 api-server 将资源保存到 etcd 后，Controller 发现了资源的变化，然后就根据变化类型会调用相应回调函数。每个 Controller 都会尽力将资源当前的状态逐步转化为 etcd 中保存的状态。
 
-3. 当所有的 Controller 正常运行后，etcd 中就会保存一个 Deployment、一个 ReplicaSet 和 三个 Pod 资源记录，并且可以通过 kube-apiserver 查看。然而，这些 Pod 资源现在还处于 Pending 状态，因为它们还没有被调度到集群中合适的 Node 上运行。这个问题最终要靠调度器（`Scheduler`）来解决。
+2. 当所有的 Controller 正常运行后，etcd 中就会保存一个 Deployment、一个 ReplicaSet 和 三个 Pod 资源记录，并且可以通过 kube-apiserver 查看。然而，这些 Pod 资源现在还处于 Pending 状态，因为它们还没有被调度到集群中合适的 Node 上运行。这个问题最终要靠调度器（`Scheduler`）来解决。
 
 ### Scheduler
 
@@ -60,11 +60,11 @@ tags:
 
 3. 当 kube-apiserver 接收到此 Binding 对象时,会更新 Pod 资源中的以下字段:
 
-    1. 将 `NodeName` 的值设置为 `ObjectReference` 中的 `NodeName`。
+    * 将 `NodeName` 的值设置为 `ObjectReference` 中的 `NodeName`。
 
-    2. 添加相关的注释。
+    * 添加相关的注释。
 
-    3. 将 `PodScheduled` 的 `status` 值设置为 `True`。
+    * 将 `PodScheduled` 的 `status` 值设置为 `True`。
 
 ### Kubelet
 
@@ -72,9 +72,9 @@ tags:
 
 1. Kubelet 每隔 20s，会通过 `NodeName` 向 api-server 发送查询请求来获取自身 Node 上所要运行的 Pod 清单。获取到数据后会和自身内部缓存比较来获取有差异的 Pod 列表。并开始同步这些 Pod。
 
-    1. 记录 Pod 启动相关的 `Metrics`
+    * 记录 Pod 启动相关的 `Metrics`
 
-    2. 生成一个 `PodStatus` 对象，它表示 Pod 当前阶段的状态。PodStatus 的值取决于：一、`PodSyncHandlers` 会检查 Pod 是否应该运行在 Node，如果不应该 `PodStatus` 会有 `Phase` 变成 `PodFailed`。二、接下来 PodStatus 会由 `init 容器` 和`应用容器`的状态共同来决定。
+    * 生成一个 `PodStatus` 对象，它表示 Pod 当前阶段的状态。PodStatus 的值取决于：一、`PodSyncHandlers` 会检查 Pod 是否应该运行在 Node，如果不应该 `PodStatus` 会有 `Phase` 变成 `PodFailed`。二、接下来 PodStatus 会由 `init 容器` 和`应用容器`的状态共同来决定。
 
 2. 生成 PodStatus 之后（Pod 中的 status 字段），Kubelet 就会将它发送到 Pod 的状态管理器，该管理器的任务是通过 apiserver 异步更新 etcd 中的记录。
 

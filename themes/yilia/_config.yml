@@ -54,7 +54,7 @@ gitment_oauth:
 
 menu:
   主页: /
-  头秃问题: /tags/issues/
+  问题排查: /tags/issues/
   随笔: /tags/essay/
 
 feed:

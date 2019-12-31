@@ -1,5 +1,5 @@
 ---
-title: '头秃问题(一) ExitCode: 128 之无任何错误信息'
+title: 'ExitCode: 128 之无任何错误信息'
 subtitle: exit-code-128
 date: 2019-11-21 02:04:24
 tags:
@@ -11,8 +11,6 @@ tags:
 ---
 
 今天在使用 `Drone CI` 构建项目时出现一个异常奇怪的错误。
-
-> 本文仅为本人记录问题使用，他人触发几率极低。
 
 ![error](/images/exitcode-128/drone-error.png)
 
