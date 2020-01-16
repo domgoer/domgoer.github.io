@@ -151,11 +151,29 @@ Kaniko 可以在不具有 `ROOT` 权限的环境下，完全在用户空间中�
 
     感觉它的更新方式就是把 Pod 删了重新创建，这里只更新了 image-2 ，但是它把 image-3 也 Kill 掉了，还重新 Pull 了 image-1 的镜像。
 
-索性在将这些问题反馈给阿里云之后，阿里云花了大半个月的时间也修复了部分重大的错误，其他意料之外的小错误，也被我们通过其他小补丁暂时避开了。（ps: 后来在 Github 上看了 [alibabacloud-eci](https://github.com/virtual-kubelet/alibabacloud-eci) 后才知道，eci 当时不支持 Pod 的 live update 的，而且在其产品文档也无对该事的描述，不得不说这事太损了。反观其竞争对手 AWS，Azure 都已支持了 Pod live update，看来阿里云还有很长的路要走 🌜）
+尽管上述问题在我们向阿里云反馈之后，一部分得到修复。但是 Drone 没执行一步都需要 Update Pod 的操作，对 ECI 来说都需要很大的代价。
+
+所以我想是否能改变 Kube Runner 的执行方式来优化整个 CI 执行的流程。
+
+> ps: 还不是要改代码。。。
+
+在 [drone-runner-eci](https://github.com/domgoer/drone-runner-eci) 中，我通过在 CI 启动时就确定好所有的镜像，然后在执行每个 `Step` 时，`Attach` 到容器中执行 `Commands` 的方式来避免 `Pod Update` 的巨大开销。
+
+但是这样做就要求每个 `Image` 都必须有 `shell`，好在我们的配置是中心化管理的，所以改起来还算方便。
+
+实际执行时，仍然遇到一个尴尬的问题，就是 Pod 的 Spec 过大（每个 Step 大概都有 100 多个 Env，大概有 10 多个 Step），在 virtual kubelet 向阿里云 ECI 提交创建请求时被阿里云的网关拒绝，返回了 414 。。。。
+
+于是只能接着优化。因为 Pod 中大多数 Env 都是相同的，所以我将他们合并在一起放到了 Pod 的 Annotations 中，再通过 DownwardAPI 将 Pod Annotations 映射到文件，再在执行每步 Step 之前将它们 export 成环境变量。
+
+> 我太难了
+
+于是 Pod 的 Spec 瞬间少了许多，也就解决了上面的 414 问题。
+
+目前 [drone-runner-eci](https://github.com/domgoer/drone-runner-eci) 已在我们生产环境稳定运行，想要体验弹性 CI 的朋友也可以尝试尝试。
 
 ## 持续优化
 
-解决了上面提到的问题，Drone 也算能勉强在 ECI 上运行了。但仍然有许多优化的空间。
+解决了上面提到的问题，Drone 也算能在 ECI 上运行了。但仍然有许多优化的空间。
 
 ### 镜像拉取
 
