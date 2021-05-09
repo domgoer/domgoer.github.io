@@ -77,7 +77,7 @@ theme: yilia
 ## Docs: https://hexo.io/docs/deployment.html
 deploy:
   type: git
-  repository: https://github.com/domgoer/domgoer.github.io.git
+  repository: https://github.com/domechn/domechn.github.io.git
   branch: master
 
 archive_generator:
@@ -151,7 +151,7 @@ changyan_appid: false
 changyan_conf: false
 
 # 5 gitment
-gitment_owner: domgoer      #你的 GitHub ID
+gitment_owner: domechn      #你的 GitHub ID
 gitment_repo: comment          #存储评论的 repo
 gitment_oauth:
   client_id: '3555e6a9977f80d27df2'           #client ID
@@ -205,7 +205,7 @@ smart_menu:
 
 # SubNav
 subnav:
-  github: "https://github.com/domgoer"
+  github: "https://github.com/domechn"
   rss: "/atom.xml"
   zhihu: "https://www.zhihu.com/people/beng-kui-de-wan-zi/activities"
 
