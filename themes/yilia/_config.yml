@@ -43,14 +43,6 @@ changyan_appid: false
 changyan_conf: false
 
 
-#5、Gitment
-gitment_owner: domechn      #你的 GitHub ID
-gitment_repo: comment          #存储评论的 repo
-gitment_oauth:
-  client_id: '3555e6a9977f80d27df2'           #client ID
-  client_secret: '4fcc0939c4a98aa712500397f83cec5fc9650859'       #client secret
-
-
 
 menu:
   主页: /
