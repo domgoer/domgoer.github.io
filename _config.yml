@@ -78,7 +78,7 @@ theme: yilia
 deploy:
   type: git
   repository: https://github.com/domechn/domechn.github.io.git
-  branch: gh-page
+  branch: gh-pages
 
 archive_generator:
     per_page: 0
