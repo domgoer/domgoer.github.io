@@ -1,0 +1,387 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Not Bad</title>
+  
+  <subtitle>独立思考，坚持写作</subtitle>
+  <link href="https://blog.domc.me/atom.xml" rel="self"/>
+  
+  <link href="https://blog.domc.me/"/>
+  <updated>2021-07-16T04:29:31.986Z</updated>
+  <id>https://blog.domc.me/</id>
+  
+  <author>
+    <name>Dom Chan</name>
+    
+  </author>
+  
+  <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>Kubernetes Gateway API</title>
+    <link href="https://blog.domc.me/2021/05/10/k8s-gateway-api/"/>
+    <id>https://blog.domc.me/2021/05/10/k8s-gateway-api/</id>
+    <published>2021-05-10T00:14:15.000Z</published>
+    <updated>2021-07-16T04:29:31.986Z</updated>
+    
+    
+    <summary type="html">&lt;ul&gt;
+&lt;li&gt;&lt;h1 id=&quot;什么是-Kubernetes-Gateway-API&quot;&gt;&lt;a href=&quot;#什么是-Kubernetes-Gateway-API&quot; class=&quot;headerlink&quot; title=&quot;什么是 Kubernetes Gateway API&quot;&gt;&lt;/a&gt;什么是 Kubernetes Gateway API&lt;/h1&gt;&lt;ul&gt;
+&lt;li&gt;Kubernetes Gateway API（以下简称 &lt;code&gt;KGA&lt;/code&gt;）是由 sig-network 小组提出的，用于帮助用户在 K8S 中对服务网络进行建模的资源的集合。&lt;/li&gt;
+&lt;li&gt;它通过提供标准化的接口，允许各个供应商提供自己的实现方式，来帮助用户规划集群内的服务网络。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h1 id=&quot;演进历史&quot;&gt;&lt;a href=&quot;#演进历史&quot; class=&quot;headerlink&quot; title=&quot;演进历史&quot;&gt;&lt;/a&gt;演进历史&lt;/h1&gt;&lt;ul&gt;
+&lt;li&gt;最初 K8S 提供了 &lt;code&gt;Ingress&lt;/code&gt; API 来让用户可以定义集群的入口网络。随着流量管理（熔断，限流，灰度）等需求的增加，最初的 &lt;code&gt;Ingress&lt;/code&gt; 的定义已经无法满足，因此社区开始分裂出了不同的实现方式。&lt;ul&gt;
+&lt;li&gt;利用 &lt;code&gt;CRD&lt;/code&gt; 扩展 &lt;code&gt;Ingress&lt;/code&gt;&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://dave.cheney.net/paste/ingress-is-dead-long-live-ingressroute.pdf&quot;&gt;https://dave.cheney.net/paste/ingress-is-dead-long-live-ingressroute.pdf&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;利用 &lt;code&gt;Annotation&lt;/code&gt; 扩展  &lt;code&gt;Ingress&lt;/code&gt;&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/&quot;&gt;nginx-controller&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;这些方式虽然能解决现有的问题，但也导致了&lt;ul&gt;
+&lt;li&gt;没有统一的标准，各个 ingress-controller 按自己的方式实现&lt;/li&gt;
+&lt;li&gt;没有可移植性&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;因此 KGA 应运而生，KGA 需要能让用户很方便的使用以下功能&lt;ul&gt;
+&lt;li&gt;&lt;h3 id=&quot;流量管理&quot;&gt;&lt;a href=&quot;#流量管理&quot; class=&quot;headerlink&quot; title=&quot;流量管理&quot;&gt;&lt;/a&gt;流量管理&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;HTTP 流量能够按 &lt;code&gt;Header&lt;/code&gt;, &lt;code&gt;URI&lt;/code&gt; 路由&lt;/li&gt;
+&lt;li&gt;流量按权重路由&lt;/li&gt;
+&lt;li&gt;流量镜像&lt;/li&gt;
+&lt;li&gt;TCP 和 UDP 等路由&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;面向角色的设计&quot;&gt;&lt;a href=&quot;#面向角色的设计&quot; class=&quot;headerlink&quot; title=&quot;面向角色的设计&quot;&gt;&lt;/a&gt;面向角色的设计&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;将 Routing 和 Service 的角色分离&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;扩展性&quot;&gt;&lt;a href=&quot;#扩展性&quot; class=&quot;headerlink&quot; title=&quot;扩展性&quot;&gt;&lt;/a&gt;扩展性&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;支持层级配置，用户可以在上层配置中添加或覆盖下层配置中的属性&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;灵活一致性&quot;&gt;&lt;a href=&quot;#灵活一致性&quot; class=&quot;headerlink&quot; title=&quot;灵活一致性&quot;&gt;&lt;/a&gt;灵活一致性&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;KGA 提供了三种级别的 API&lt;ul&gt;
+&lt;li&gt;core&lt;ul&gt;
+&lt;li&gt;必须实现&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;extended&lt;ul&gt;
+&lt;li&gt;可以不实现，如果实现必须保证移植性&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;custom&lt;ul&gt;
+&lt;li&gt;各个 controller 可以自定义，且不需要提供可移植保证&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;</summary>
+    
+    
+    
+    
+    <category term="kubernetes" scheme="https://blog.domc.me/tags/kubernetes/"/>
+    
+    <category term="network" scheme="https://blog.domc.me/tags/network/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>记一次 WebSocket 连接泄露排查</title>
+    <link href="https://blog.domc.me/2019/12/29/websocket-leak/"/>
+    <id>https://blog.domc.me/2019/12/29/websocket-leak/</id>
+    <published>2019-12-29T16:34:34.000Z</published>
+    <updated>2021-07-16T04:29:31.986Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;之前重构了某个 &lt;code&gt;WebSocket&lt;/code&gt; 服务，在运行了一段时间之后有同事反应该服务卡顿，时常获取不到数据。&lt;/p&gt;
+&lt;p&gt;于是我尝试开始复现该情况。&lt;/p&gt;
+&lt;p&gt;打开浏览器跳转到相应的页面后，发现数据立刻就加载了出来，但是多次刷新页面之后，就开始出现无法加载数据的情况。打开控制台，发现报了如下的错误。&lt;/p&gt;
+&lt;figure class=&quot;highlight bash&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;WebSocket connection to &lt;span class=&quot;string&quot;&gt;&amp;#x27;ws://xxxxx/&amp;#x27;&lt;/span&gt; failed: Error &lt;span class=&quot;keyword&quot;&gt;in&lt;/span&gt; connection establishment: net::ERR_CONNECTION_FAILED&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+
+&lt;p&gt;一般来说出现该问题可能是因为网络问题或者连接超时引起的，在排除了自身网络问题的前提下，我调大了 WebSocet 的连接超时时间。但还是出现了上述的情况。&lt;/p&gt;
+&lt;p&gt;接着我猜想是不是我们的长连接网关出了问题。于是我查看了网关的日志，发现网关压根就没接收到出现 &lt;code&gt;ERR_CONNECTION_FAILED&lt;/code&gt; 错误的连接。&lt;/p&gt;
+&lt;p&gt;于是我确定是之前重构的项目问题。&lt;/p&gt;</summary>
+    
+    
+    
+    
+    <category term="issues" scheme="https://blog.domc.me/tags/issues/"/>
+    
+    <category term="websocket" scheme="https://blog.domc.me/tags/websocket/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>ExitCode: 128 之无任何错误信息</title>
+    <link href="https://blog.domc.me/2019/11/21/exit-code-128/"/>
+    <id>https://blog.domc.me/2019/11/21/exit-code-128/</id>
+    <published>2019-11-21T02:04:24.000Z</published>
+    <updated>2021-07-16T04:29:31.986Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;今天在使用 &lt;code&gt;Drone CI&lt;/code&gt; 构建项目时出现一个异常奇怪的错误。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/images/exitcode-128/drone-error.png&quot; alt=&quot;error&quot;&gt;&lt;/p&gt;
+&lt;p&gt;在 &lt;code&gt;clone&lt;/code&gt; 某分支代码时构建直接失败退出了。&lt;/p&gt;
+&lt;p&gt;首先我排查了 &lt;code&gt;rpc error&lt;/code&gt;，发现这个错误出现的原因是正在获取 &lt;code&gt;Pod&lt;/code&gt; 的 &lt;code&gt;Log&lt;/code&gt; 的过程中，Pod 被删除了。&lt;/p&gt;
+&lt;p&gt;当时我就觉得很奇怪，就算因为 &lt;code&gt;Step&lt;/code&gt; 执行失败要删除 Pod，那也会先停止 &lt;code&gt;getLog&lt;/code&gt;，而不是在 getLog 的过程中直接删除 Pod。&lt;/p&gt;
+&lt;p&gt;于是使用了 &lt;code&gt;kubectl describe&lt;/code&gt; 了这个 Pod，发现该 Container 的 &lt;code&gt;Exit Code&lt;/code&gt; 是 128。说明是该 Container 执行时出错，自己退出的。&lt;/p&gt;
+&lt;p&gt;但是从上图的日志中来看 Container 应该是执行成功了，并没有出现错误的日志。那为什么该 Container 的退出码是 128 而非 0 呢。&lt;/p&gt;
+&lt;p&gt;于是我开始怀疑是不是 &lt;code&gt;git checkout -b master&lt;/code&gt; 时出现了错误，于是我在 Docker 容器中模拟了该 Step 的步骤，&lt;code&gt;git checkout -b master | echo $?&lt;/code&gt;，发现即使是显示 &lt;code&gt;Already on master&lt;/code&gt; 它的退出码也是 0。于是排除了是 git 出错的可能性。&lt;/p&gt;
+&lt;p&gt;那么问题出在哪呢？&lt;/p&gt;</summary>
+    
+    
+    
+    
+    <category term="issues" scheme="https://blog.domc.me/tags/issues/"/>
+    
+    <category term="ci/cd" scheme="https://blog.domc.me/tags/ci-cd/"/>
+    
+    <category term="drone" scheme="https://blog.domc.me/tags/drone/"/>
+    
+    <category term="devops" scheme="https://blog.domc.me/tags/devops/"/>
+    
+    <category term="kubernetes" scheme="https://blog.domc.me/tags/kubernetes/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>如何将Drone CI调度到Virtual Kubelet</title>
+    <link href="https://blog.domc.me/2019/11/18/drone-virtual-kublet/"/>
+    <id>https://blog.domc.me/2019/11/18/drone-virtual-kublet/</id>
+    <published>2019-11-18T23:53:30.000Z</published>
+    <updated>2021-07-16T04:29:31.986Z</updated>
+    
+    
+    <summary type="html">&lt;h2 id=&quot;什么是-virtual-kubelet&quot;&gt;&lt;a href=&quot;#什么是-virtual-kubelet&quot; class=&quot;headerlink&quot; title=&quot;什么是 virtual kubelet&quot;&gt;&lt;/a&gt;什么是 virtual kubelet&lt;/h2&gt;&lt;p&gt;以下是来自 &lt;a href=&quot;https://github.com/virtual-kubelet/virtual-kubelet#virtual-kubelet&quot;&gt;Virtual Kubelet&lt;/a&gt; 项目的文档的中文翻译。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Virtual Kubelet 是开源的 Kubernetes kubelet 的实现，它可以伪装成 Kubelet 将 Kubernetes 连接到其他 API。这样就允许 Node 的背后由其他服务支撑，例如：ACI, AWS Fargate, IoT Edge。Virtual Kubelet 的主要作用是扩展无服务器（Serverless）平台，让它能够与 Kubernetes 通信。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;以 &lt;code&gt;阿里云ECI&lt;/code&gt; 为例（以下均以 ECI 代指 Virtual Kubelet），ECI 是阿里云的弹性容器实例。可以将每台 ECI 实例看作是一个 &lt;code&gt;Container&lt;/code&gt;，所以它的创建和销毁是很廉价的。同时它拥有启动快（秒级）、成本低（按运行的秒数收费）、弹性能力强等特点。通过 Virtual Kubelet 提供的 &lt;a href=&quot;https://github.com/virtual-kubelet/virtual-kubelet#current-features&quot;&gt;Kubernetes API&lt;/a&gt;，ECI 就能和 K8S 交互，我们就可以在 ECI 上执行创建 Pod 或者删除 Pod 等操作。&lt;/p&gt;
+&lt;h2 id=&quot;使用-virtual-kubelet-执行-drone-任务的好处&quot;&gt;&lt;a href=&quot;#使用-virtual-kubelet-执行-drone-任务的好处&quot; class=&quot;headerlink&quot; title=&quot;使用 virtual kubelet 执行 drone 任务的好处&quot;&gt;&lt;/a&gt;使用 virtual kubelet 执行 drone 任务的好处&lt;/h2&gt;&lt;p&gt;在使用 virtual kubelet 之前，为了不影响业务的稳定性。我们的 K8S 集群中开了几台固定的 ECS 实例专门给 CI 使用（给这些 Node 打上了污点，所以业务的服务不会调度到上面）。&lt;/p&gt;
+&lt;p&gt;这种做法虽然在不影响业务的情况下也保证了 CI 的稳定运行，但是它会造成一定程度的浪费。因为 CI 本身不像大多数业务服务，需要一天 24 小时的运行。CI 的场景是白天需要很多资源，但是到了晚上几乎不消耗任何资源。所以可以说这些机器有接近 1/3 的时间是在浪费 💰 的。&lt;/p&gt;
+&lt;p&gt;虽说 K8S 本身也提供了动态扩容机制，可以设置很少的固定资源再通过 CA 动态扩容集群来减少资源消耗。但是 CA 的启动速度（分钟级）满足不了 CI 这种时效要求高的场景。&lt;/p&gt;</summary>
+    
+    
+    
+    
+    <category term="ci/cd" scheme="https://blog.domc.me/tags/ci-cd/"/>
+    
+    <category term="drone" scheme="https://blog.domc.me/tags/drone/"/>
+    
+    <category term="devops" scheme="https://blog.domc.me/tags/devops/"/>
+    
+    <category term="kubernetes" scheme="https://blog.domc.me/tags/kubernetes/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Drone 在 K8S 中执行一次构建都经历了什么</title>
+    <link href="https://blog.domc.me/2019/10/22/drone-in-k8s/"/>
+    <id>https://blog.domc.me/2019/10/22/drone-in-k8s/</id>
+    <published>2019-10-22T14:37:10.000Z</published>
+    <updated>2021-07-16T04:29:31.986Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;在谈这个问题之前我们先来看看 drone 的结构。&lt;/p&gt;
+&lt;h2 id=&quot;结构&quot;&gt;&lt;a href=&quot;#结构&quot; class=&quot;headerlink&quot; title=&quot;结构&quot;&gt;&lt;/a&gt;结构&lt;/h2&gt;&lt;p&gt;drone 由 3 个主要的部分组成，分别是 &lt;code&gt;drone-server&lt;/code&gt;、&lt;code&gt;drone-controller&lt;/code&gt; 和 &lt;code&gt;drone-agent&lt;/code&gt;。&lt;/p&gt;
+&lt;h3 id=&quot;drone-server&quot;&gt;&lt;a href=&quot;#drone-server&quot; class=&quot;headerlink&quot; title=&quot;drone-server&quot;&gt;&lt;/a&gt;drone-server&lt;/h3&gt;&lt;p&gt;顾名思义，&lt;code&gt;drone-server&lt;/code&gt; 是 drone 的服务端，它会启动一个 &lt;code&gt;http&lt;/code&gt; 服务来处理各种请求，如 github 每次 push 或者其他操作触发的 webhook 亦或者是 &lt;code&gt;drone-web-ui&lt;/code&gt; 的每个请求。&lt;/p&gt;
+&lt;h3 id=&quot;drone-controller&quot;&gt;&lt;a href=&quot;#drone-controller&quot; class=&quot;headerlink&quot; title=&quot;drone-controller&quot;&gt;&lt;/a&gt;drone-controller&lt;/h3&gt;&lt;p&gt;controller 的作用是初始化 pipeline 信息，它会定义好 pipeline 的每个 step 在执行之前、执行之后以及获取和写入执行日志的函数，并保证每个 pipeline 能按顺序执行 step。&lt;/p&gt;
+&lt;h3 id=&quot;drone-agent&quot;&gt;&lt;a href=&quot;#drone-agent&quot; class=&quot;headerlink&quot; title=&quot;drone-agent&quot;&gt;&lt;/a&gt;drone-agent&lt;/h3&gt;&lt;p&gt;可以将 &lt;code&gt;drone-agent&lt;/code&gt; 在 &lt;code&gt;drone&lt;/code&gt; 中的作用简单的理解为是 &lt;code&gt;kubelet&lt;/code&gt; 在 &lt;code&gt;k8s&lt;/code&gt; 中的作用，因为本文主要讨论的是 drone 在 k8s 中的执行过程，在 k8s 中，drone 的执行并不依赖 &lt;code&gt;drone-agent&lt;/code&gt;，所以本文并不会对该组件做详细介绍。&lt;/p&gt;</summary>
+    
+    
+    
+    
+    <category term="drone" scheme="https://blog.domc.me/tags/drone/"/>
+    
+    <category term="devops" scheme="https://blog.domc.me/tags/devops/"/>
+    
+    <category term="kubernetes" scheme="https://blog.domc.me/tags/kubernetes/"/>
+    
+    <category term="CI/CD" scheme="https://blog.domc.me/tags/CI-CD/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>kubectl run 背后做了什么</title>
+    <link href="https://blog.domc.me/2019/08/29/kubectl-run/"/>
+    <id>https://blog.domc.me/2019/08/29/kubectl-run/</id>
+    <published>2019-08-29T16:18:17.000Z</published>
+    <updated>2021-07-16T04:29:31.986Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;这篇文章随便写写，只写流程，不写原理&lt;/p&gt;
+&lt;h2 id=&quot;执行-kubectl-run&quot;&gt;&lt;a href=&quot;#执行-kubectl-run&quot; class=&quot;headerlink&quot; title=&quot;执行 kubectl run&quot;&gt;&lt;/a&gt;执行 kubectl run&lt;/h2&gt;&lt;h3 id=&quot;Api-Server&quot;&gt;&lt;a href=&quot;#Api-Server&quot; class=&quot;headerlink&quot; title=&quot;Api Server&quot;&gt;&lt;/a&gt;Api Server&lt;/h3&gt;&lt;ol&gt;
+&lt;li&gt;&lt;p&gt;本地验证，确保不合法的请求（比如：创建不支持的资源或者格式不对等等）会快速失败，不会发给 api-server，减轻服务端压力&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;准备向 api-server 发送 HTTP 请求，将修改后的数据进行序列化。但是 URI PATH 是什么呢？这里就依赖资源内的 apiVersion 这个值，再加上资源类型，kubectl 就能在 api 列表中找到应该发往的地址。api 列表可以通过 api-server 的 /apis 这个 URL 获取，获取之后会在本地缓存一份，提高效率。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;api-server 肯定不会接受不合法的请求，所以 kubectl 还要在请求之前设置好认证信息。认证信息一般可以从 ~/.kube/config 中获取，它支持 4 种。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;tls: 需要使用 x509 证书&lt;/li&gt;
+&lt;li&gt;token: 在 HEADER 中添加 Authorization&lt;/li&gt;
+&lt;li&gt;basic username password: 基本的账号密码认证&lt;/li&gt;
+&lt;li&gt;openid: 类似于 token，openid 由用户事先手动设置&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;这时 api-server 已经成功接收到了请求。它会判断我们是不是有权限操作这个资源。那么怎么验证呢，在 api-server 启动的时候，可以通过参数 –authorization_mode 进行设置，这个值有 4 种。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;webhook: 与集群外的 HTTPS 服务交互&lt;/li&gt;
+&lt;li&gt;ABAC: 静态文件定义的策略&lt;/li&gt;
+&lt;li&gt;RBAC: 动态配置的策略&lt;/li&gt;
+&lt;li&gt;Node: 每个 kubelet 只能访问自己节点上的资源&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt; 如果配置了多种授权方式，只要其中一种能通过那么请求就能继续。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;授权通过了，但是现在仍然还不能够向 etcd 中写数据，还需要经过&lt;code&gt;准入控制链&lt;/code&gt;这道关卡。准入控制链由 &lt;code&gt;Admission Controller&lt;/code&gt; 控制。官方标准的准入控制链有近 10 个之多，而且支持自定义扩展。不同于授权，准入控制链一旦有一个验证失败，那么请求就会被拒绝。以下介绍三个准入控制器。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;SecurityContextDeny: 禁止创建设置了 Security Context 的 Pod&lt;/li&gt;
+&lt;li&gt;ResourceQuota: 限制某个 Namespace 下总系统资源的占用量和资源的数量&lt;/li&gt;
+&lt;li&gt;LimitRanger: 限制某个 Namespace 下单个资源的占用量&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;通过上面所有验证后，api-server 将 kubectl 提交的数据反序列化，然后保存到 etcd 中。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;</summary>
+    
+    
+    
+    
+    <category term="kubernetes" scheme="https://blog.domc.me/tags/kubernetes/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>kubeDNS和coreDNS</title>
+    <link href="https://blog.domc.me/2019/08/07/kube-dns-and-core-dns/"/>
+    <id>https://blog.domc.me/2019/08/07/kube-dns-and-core-dns/</id>
+    <published>2019-08-07T21:32:39.000Z</published>
+    <updated>2021-07-16T04:29:31.986Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;本篇文章主要围绕两种 DNS Server 的实现方式展开，会比较两种 Server 的优缺点。&lt;/p&gt;
+&lt;p&gt;在说两个 Service 之前，我们先来了解一下在k8s中域名是如何被解析的。&lt;/p&gt;
+&lt;p&gt;我们都知道，在 k8s 中，一个 Pod 如果要访问同 Namespace 下的 Service（比如 user-svc），那么只需要curl user-svc。如果 Pod 和 Service 不在同一域名下，那么就需要在 Service Name 之后添加上 Service 所在的 Namespace（比如 beta），curl user-svc.beta。那么 k8s 是如何知道这些域名是内部域名并为他们做解析的呢？&lt;/p&gt;</summary>
+    
+    
+    
+    
+    <category term="kubernetes" scheme="https://blog.domc.me/tags/kubernetes/"/>
+    
+    <category term="dns" scheme="https://blog.domc.me/tags/dns/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>golang sync.Map源码解析</title>
+    <link href="https://blog.domc.me/2019/03/01/golang-sync-map/"/>
+    <id>https://blog.domc.me/2019/03/01/golang-sync-map/</id>
+    <published>2019-03-01T14:04:44.000Z</published>
+    <updated>2021-07-16T04:29:31.986Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;golang的内建类型map是非线程安全的，当我们使用并发操作去写map时会引发panic&lt;/p&gt;
+&lt;figure class=&quot;highlight go&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;14&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;15&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;16&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;17&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;18&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;19&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;20&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;21&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;22&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;package&lt;/span&gt; main&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; (&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&lt;span class=&quot;string&quot;&gt;&amp;quot;fmt&amp;quot;&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&lt;span class=&quot;string&quot;&gt;&amp;quot;sync&amp;quot;&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;function&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;func&lt;/span&gt; &lt;span class=&quot;title&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;params&quot;&gt;()&lt;/span&gt;&lt;/span&gt; &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&lt;span class=&quot;keyword&quot;&gt;var&lt;/span&gt; m = &lt;span class=&quot;built_in&quot;&gt;make&lt;/span&gt;(&lt;span class=&quot;keyword&quot;&gt;map&lt;/span&gt;[&lt;span class=&quot;keyword&quot;&gt;string&lt;/span&gt;]&lt;span class=&quot;keyword&quot;&gt;string&lt;/span&gt;,&lt;span class=&quot;number&quot;&gt;100&lt;/span&gt;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&lt;span class=&quot;keyword&quot;&gt;var&lt;/span&gt; wait  sync.WaitGroup&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&lt;span class=&quot;keyword&quot;&gt;for&lt;/span&gt; i := &lt;span class=&quot;number&quot;&gt;0&lt;/span&gt; ;i &amp;lt; &lt;span class=&quot;number&quot;&gt;100&lt;/span&gt; ; i ++ &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		wait.Add(&lt;span class=&quot;number&quot;&gt;1&lt;/span&gt;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		&lt;span class=&quot;keyword&quot;&gt;go&lt;/span&gt; &lt;span class=&quot;function&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;func&lt;/span&gt;&lt;span class=&quot;params&quot;&gt;()&lt;/span&gt;&lt;/span&gt; &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;			m[fmt.Sprintf(&lt;span class=&quot;string&quot;&gt;&amp;quot;%d&amp;quot;&lt;/span&gt;,i)] = &lt;span class=&quot;string&quot;&gt;&amp;quot;test&amp;quot;&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;			wait.Done()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		&amp;#125;()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	wait.Wait()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;</summary>
+    
+    
+    
+    
+    <category term="golang" scheme="https://blog.domc.me/tags/golang/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>如何用Redis实现一个指定时间的限速器</title>
+    <link href="https://blog.domc.me/2019/02/28/redis-limit/"/>
+    <id>https://blog.domc.me/2019/02/28/redis-limit/</id>
+    <published>2019-02-28T14:53:58.000Z</published>
+    <updated>2021-07-16T04:29:31.986Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;使用Redis的&lt;code&gt;Incr&lt;/code&gt;可以很容易的实现一个限速器&lt;/p&gt;
+&lt;p&gt;在redis的官方文档中也有详细的示例&lt;/p&gt;
+&lt;figure class=&quot;highlight c&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;14&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;15&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;16&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;17&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;18&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;19&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;function&quot;&gt;FUNCTION &lt;span class=&quot;title&quot;&gt;LIMIT_API_CALL&lt;/span&gt;&lt;span class=&quot;params&quot;&gt;(ip)&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;function&quot;&gt;ts &lt;/span&gt;= CURRENT_UNIX_TIME()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;keyname = ip+&lt;span class=&quot;string&quot;&gt;&amp;quot;:&amp;quot;&lt;/span&gt;+ts&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;current = GET(keyname)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;IF current != &lt;span class=&quot;literal&quot;&gt;NULL&lt;/span&gt; AND current &amp;gt; &lt;span class=&quot;number&quot;&gt;10&lt;/span&gt; THEN&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    ERROR &lt;span class=&quot;string&quot;&gt;&amp;quot;too many requests per second&amp;quot;&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;END&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;IF current == &lt;span class=&quot;literal&quot;&gt;NULL&lt;/span&gt; THEN&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    MULTI&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        INCR(keyname, &lt;span class=&quot;number&quot;&gt;1&lt;/span&gt;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        EXPIRE(keyname, &lt;span class=&quot;number&quot;&gt;1&lt;/span&gt;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    EXEC&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;ELSE&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    INCR(keyname, &lt;span class=&quot;number&quot;&gt;1&lt;/span&gt;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;END&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;PERFORM_API_CALL()&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;</summary>
+    
+    
+    
+    
+    <category term="redis" scheme="https://blog.domc.me/tags/redis/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>解决golang使用elastic连接elasticsearch时自动转换连接地址</title>
+    <link href="https://blog.domc.me/2019/02/28/golang-elastic-url/"/>
+    <id>https://blog.domc.me/2019/02/28/golang-elastic-url/</id>
+    <published>2019-02-28T14:53:27.000Z</published>
+    <updated>2021-07-16T04:29:31.986Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;使用&lt;a href=&quot;https://github.com/olivere/elastic&quot;&gt;olivere/&lt;em&gt;elastic&lt;/em&gt;&lt;/a&gt;连接elasticsearch时，发现连接地址明明输入的时候是公网地址，但是连接时会自动转换成内网地址或者docker中的ip地址，导致服务连接不上。&lt;/p&gt;
+&lt;figure class=&quot;highlight plaintext&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;// 自动转换成docker中的ip导致无法连接服务&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;time=&amp;quot;2019-02-15T20:04:26+08:00&amp;quot; level=error msg=&amp;quot;Head http://172.17.0.2:9200: context deadline exceeded&amp;quot;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+
+&lt;h2 id=&quot;解决方法&quot;&gt;&lt;a href=&quot;#解决方法&quot; class=&quot;headerlink&quot; title=&quot;解决方法&quot;&gt;&lt;/a&gt;解决方法&lt;/h2&gt;</summary>
+    
+    
+    
+    
+    <category term="golang" scheme="https://blog.domc.me/tags/golang/"/>
+    
+    <category term="elasticsearch" scheme="https://blog.domc.me/tags/elasticsearch/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>github 移除敏感文件提交记录</title>
+    <link href="https://blog.domc.me/2019/02/28/github-sensitive/"/>
+    <id>https://blog.domc.me/2019/02/28/github-sensitive/</id>
+    <published>2019-02-28T14:52:51.000Z</published>
+    <updated>2021-07-16T04:29:31.986Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;在往github提交代码时，有可能会将一些私密信息提交到仓库，即使后续删除该文件，该文件的内容依然可以在github的提交记录中被找到。&lt;/p&gt;
+&lt;p&gt;因此如果需要数据从history中删除，可以使用&lt;code&gt;git filter-branch&lt;/code&gt;命令或BFG Repo-Cleaner开源工具。&lt;/p&gt;
+&lt;p&gt;本文主要介绍如何使用&lt;code&gt;git filter-branch&lt;/code&gt;命令清除history中指定文件的内容。&lt;/p&gt;
+&lt;p&gt;值得注意的是，如果我们清除了history中的记录，后续我们将无法使用其他命令查看该文件的提交记录和变化。&lt;/p&gt;
+&lt;p&gt;下面开始使用git filter-branch清除文件提交记录&lt;/p&gt;</summary>
+    
+    
+    
+    
+    <category term="git" scheme="https://blog.domc.me/tags/git/"/>
+    
+    <category term="github" scheme="https://blog.domc.me/tags/github/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>[Golang] http.Request复用</title>
+    <link href="https://blog.domc.me/2019/02/28/golang-http-request/"/>
+    <id>https://blog.domc.me/2019/02/28/golang-http-request/</id>
+    <published>2019-02-28T14:49:45.000Z</published>
+    <updated>2021-07-16T04:29:31.986Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;&lt;strong&gt;复用针对除了Get以外的请求&lt;/strong&gt;&lt;/p&gt;
+&lt;figure class=&quot;highlight go&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;14&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;package&lt;/span&gt; main&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; (&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&lt;span class=&quot;string&quot;&gt;&amp;quot;net/http&amp;quot;&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&lt;span class=&quot;string&quot;&gt;&amp;quot;strings&amp;quot;&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;function&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;func&lt;/span&gt; &lt;span class=&quot;title&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;params&quot;&gt;()&lt;/span&gt;&lt;/span&gt;&amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        reader := strings.NewReader(&lt;span class=&quot;string&quot;&gt;&amp;quot;hello&amp;quot;&lt;/span&gt;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    	req,_ := http.NewRequest(&lt;span class=&quot;string&quot;&gt;&amp;quot;POST&amp;quot;&lt;/span&gt;,&lt;span class=&quot;string&quot;&gt;&amp;quot;http://www.abc.com&amp;quot;&lt;/span&gt;,reader)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    	client := http.Client&amp;#123;&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    	client.Do(req) &lt;span class=&quot;comment&quot;&gt;// 第一次会请求成功&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    	client.Do(req) &lt;span class=&quot;comment&quot;&gt;// 请求失败&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;</summary>
+    
+    
+    
+    
+    <category term="golang" scheme="https://blog.domc.me/tags/golang/"/>
+    
+    <category term="http" scheme="https://blog.domc.me/tags/http/"/>
+    
+  </entry>
+  
+</feed>
